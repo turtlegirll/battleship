@@ -132,10 +132,8 @@ ships.forEach(ship => {
 
 //drag player ships
 
-
 let draggedShip;
 const optionShips = Array.from(optionContainer.children)
-
 optionShips.forEach(optionShip => optionShip.addEventListener('dragstart', dragStart))
 
 const allPlayerBlocks = document.querySelectorAll('#player div')
@@ -185,25 +183,26 @@ let playerTurn;
 startGameBtn.addEventListener('click', startGame)
 
 function startGame() {
-    if(playerTurn ===undefined){
+    if (playerTurn === undefined) {
+        console.log('How many kids', optionContainer.children.length)
         if (optionContainer.children.length !== 0) {
             infoDisplay.textContent = "Please place all your ships!"
         } else {
             const allBoardBlocks = document.querySelectorAll('#ai div')
             allBoardBlocks.forEach(block => block.addEventListener('click', handleClick))
+            playerTurn = true
+            turnDisplay.textContent = "Your Go!"
+            infoDisplay.textContent = "The Game has begun"
         }
-        playerTurn = true
-        turnDisplay.textContent = "Your Go!"
-        infoDisplay.textContent = "The Game has begun"
-        console.log('start')
     }
-
 }
 
 let playerHits = []
 let aiHits = []
 const playerSunkShips = []
 const aiSunkShips = []
+let aiIndexHits = []
+let aiIndexAnyHits = []
 
 function handleClick(e) {
     if (!gameOver) {
@@ -216,7 +215,7 @@ function handleClick(e) {
             classes = classes.filter(className => className !== 'taken')
             playerHits.push(...classes);
             checkScore('player', playerHits, playerSunkShips)
-            console.log(playerHits)
+            // console.log(playerHits)
         } else {
             e.target.classList.add('empty')
             infoDisplay.textContent = "You missed"
@@ -228,7 +227,7 @@ function handleClick(e) {
     }
 }
 
-function computerGo() {
+function computerGo2() {
     if (!gameOver) {
         turnDisplay.textContent = "Computers turn"
         infoDisplay.textContent = "Computer is thinking..."
@@ -238,7 +237,6 @@ function computerGo() {
         const allBoardBlocks = document.querySelectorAll('#player div')
         if (allBoardBlocks[randomGo].classList.contains('taken') && allBoardBlocks[randomGo].classList.contains('boom')) {
             computerGo()
-            return
         } else if (allBoardBlocks[randomGo].classList.contains('taken') && !allBoardBlocks[randomGo].classList.contains('boom')) {
             allBoardBlocks[randomGo].classList.add('boom')
             infoDisplay.textContent = "Computer hit your ship!"
@@ -247,11 +245,14 @@ function computerGo() {
             classes = classes.filter(className => className !== 'boom')
             classes = classes.filter(className => className !== 'taken')
             aiHits.push(...classes)
+            aiIndexHits.push(randomGo)
+            aiIndexAnyHits.push(randomGo)
             checkScore('ai', aiHits, aiSunkShips)
-            return;
         } else {
             infoDisplay.textContent = "Nothing hit this time"
             allBoardBlocks[randomGo].classList.add('empty')
+            aiIndexAnyHits.push(randomGo)
+
         }
 
 
@@ -265,6 +266,164 @@ function computerGo() {
     }, 3000)
 
 }
+
+//TODO: after computer sunk ship deleted the adjacent ind and start from random index
+
+function computerGo() {
+    console.log("aiHits", aiHits)
+    console.log("aiSunkShips", aiSunkShips)
+    console.log("aiIndexHits", aiIndexHits)
+    if (!gameOver) {
+        turnDisplay.textContent = "Computer's turn";
+        infoDisplay.textContent = "Computer is thinking...";
+    }
+
+    setTimeout(() => {
+
+
+        //let randomGo = Math.floor(Math.random() * width * width)
+        let randomGo = 10;
+        const allBoardBlocks = document.querySelectorAll('#player div')
+
+        // Check if there are any ships that were hit but not sunk yet
+        // Inside the setTimeout function in the computerGo function
+        if (aiIndexHits.length > 0 && aiSunkShips.indexOf(aiIndexHits[0]) === -1) {
+            const lastHitIndex = aiIndexHits[aiIndexHits.length - 1]; // Get the last hit index
+            const adjacentIndices = getAdjacentIndices(lastHitIndex,aiIndexAnyHits);
+
+            const availableAdjacentIndices = adjacentIndices.filter(index =>
+                !aiIndexHits.includes(index) &&
+                !aiIndexAnyHits.includes(index) && // Exclude both successful and unsuccessful hits
+                index >= 0 &&
+                index < width * width
+            );
+
+            if (availableAdjacentIndices.length > 0) {
+                console.log("in 1")
+                randomGo = availableAdjacentIndices[Math.floor(Math.random() * availableAdjacentIndices.length)];
+            } else {
+                // If no available adjacent indices, revert to random move
+                console.log("in 2")
+
+                randomGo = Math.floor(Math.random() * width * width);
+            }
+        }
+
+        console.log("Random index:", randomGo); // Add this line
+
+        if (allBoardBlocks[randomGo].classList.contains('taken') && allBoardBlocks[randomGo].classList.contains('boom')) {
+            computerGo()
+        } else if (allBoardBlocks[randomGo].classList.contains('taken') && !allBoardBlocks[randomGo].classList.contains('boom')) {
+            allBoardBlocks[randomGo].classList.add('boom')
+            infoDisplay.textContent = "Computer hit your ship!"
+            let classes = Array.from(allBoardBlocks[randomGo].classList)
+            classes = classes.filter(className => className !== 'block')
+            classes = classes.filter(className => className !== 'boom')
+            classes = classes.filter(className => className !== 'taken')
+            aiHits.push(...classes)
+            aiIndexHits.push(randomGo)
+            aiIndexAnyHits.push(randomGo)
+            getAdjacentIndices(randomGo, aiIndexAnyHits);
+            checkScore('ai', aiHits, aiSunkShips)
+        } else {
+            infoDisplay.textContent = "Nothing hit this time"
+            allBoardBlocks[randomGo].classList.add('empty')
+            aiIndexAnyHits.push(randomGo)
+
+        }
+
+
+    }, 2000);
+    setTimeout(() => {
+        playerTurn = true;
+        turnDisplay.textContent = "Players move"
+        infoDisplay.textContent = "Please make your move"
+        const allBoardBlocks = document.querySelectorAll('#ai div')
+        allBoardBlocks.forEach(block => block.addEventListener('click', handleClick))
+    }, 3000)
+}
+
+
+// Function to get adjacent indices for a given index
+function getAdjacentIndices(index, hits) {
+    console.log("in adjacent index")
+    console.log("index", index)
+    const adjacentIndices = [];
+
+    let result
+    if ((result = index - width) >= 0 && !hits.includes(result)) {
+        adjacentIndices.push(result)
+    }
+    if ((result = index + width) < width * width && !hits.includes(result)) {
+        adjacentIndices.push(result)
+    }
+
+    if (index % width !== 0 && !hits.includes(index - 1)) {
+        adjacentIndices.push(index - 1);
+    }
+    if ((index + 1) % width !== 0 && !hits.includes(index + 1)) {
+        adjacentIndices.push(index + 1);
+    }
+
+    console.log(adjacentIndices + " adjacent indices")
+
+    return adjacentIndices;
+}
+
+
+// Function to get adjacent indices for a given index
+function getAdjacentIndices2(index) {
+    console.log("in adjacent index")
+    console.log("index", index)
+    const adjacentIndices = [];
+
+    let result
+    if ((result = index - width) >= 0) {
+        adjacentIndices.push(result)
+    }
+    if ((result = index + width) < width * width) {
+        adjacentIndices.push(result)
+    }
+
+    if (index % width !== 0) {
+        adjacentIndices.push(index - 1);
+    }
+    if ((index + 1) % width !== 0) {
+        adjacentIndices.push(index + 1);
+    }
+    console.log(adjacentIndices + " adjace")
+    return adjacentIndices;
+}
+
+
+/*function getAdjacentIndices(index, width) {
+    const adjacentIndices = [];
+
+    //up
+    if (index - width >= 0) {
+        adjacentIndices.push(index - width);
+    }
+    //down
+    if (index + width < width * width) {
+        adjacentIndices.push(index + width);
+    }
+    //left
+    if (index % width !== 0) {
+        adjacentIndices.push(index - 1);
+    }
+    //right
+    if ((index + 1) % width !== 0) {
+        adjacentIndices.push(index + 1);
+    }
+
+    console.log(adjacentIndices + " there we go");
+    return adjacentIndices;
+}
+
+const index = 29;
+const adjacentIndices = getAdjacentIndices(index, width);
+console.log(adjacentIndices);*/
+
 
 function checkScore(user, hits, sunkenShips) {
     function checkShip(shipName, shipLength) {
@@ -291,7 +450,7 @@ function checkScore(user, hits, sunkenShips) {
     checkShip('carrier', 5)
 
     console.log('playerHits', playerHits)
-    console.log('playerSunkships', playerSunkShips)
+    console.log('playerSunkShips', playerSunkShips)
 
     if (playerSunkShips.length === 5) {
         infoDisplay.textContent = "You sunk all the computers ships. You won!"
