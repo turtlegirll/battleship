@@ -1,6 +1,8 @@
 const flipButton = document.querySelector('#flip')
 const optionContainer = document.querySelector('.option-container')
 const gamesBoardContainer = document.querySelector('#gamesboard-container')
+
+const gamesBoardTitleContainer = document.querySelector('#gamesboard-title')
 const startGameBtn = document.querySelector('#start')
 flipButton.addEventListener('click', flip)
 const infoDisplay = document.querySelector('#info')
@@ -18,6 +20,19 @@ const width = 10;
 
 
 function createBoard(color, user) {
+    const gameBoardContainerTitle = document.createElement('div');
+    gameBoardContainerTitle.classList.add(`${user}-title`);
+    gameBoardContainerTitle.id = `${user}-title`
+    gameBoardContainerTitle.textContent = `${user} - Game Board`;
+
+    if(user === "player"){
+        gameBoardContainerTitle.textContent = `Your Boats`;
+
+    }else{
+        gameBoardContainerTitle.textContent = `Computers Boats. Attack!`;
+
+    }
+
     const gameBoardContainer = document.createElement('div');
     gameBoardContainer.classList.add('game-board');
     gameBoardContainer.style.backgroundColor = color;
@@ -29,7 +44,9 @@ function createBoard(color, user) {
         block.id = i;
         gameBoardContainer.append(block);
     }
+    gamesBoardTitleContainer.append(gameBoardContainerTitle)
     gamesBoardContainer.append(gameBoardContainer);
+
 }
 
 createBoard('lightcoral', 'player');
@@ -403,7 +420,7 @@ function computerGo() {
                         console.log(randomGo, "randomGo here when none")
 
                     }
-                }else{
+                } else {
                     console.log("The ship with this ne index wouldnt be hit")
                     console.log(availableAdjacentIndices, 'availableAdjacentIndices if the ship wouldnt be hit')
                     randomGo = randomGoTemp;
