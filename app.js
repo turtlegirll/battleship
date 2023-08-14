@@ -248,11 +248,11 @@ function handleClick(e) {
     }
 }
 
-//TODO: after computer sunk ship deleted the adjacent ind and start from random index
 let adjacentIndices = []
 let availableAdjacentIndices = []
 let newAdjacentIndices = []
 let currentlyStruckShip = []
+let sunkenShipIndices = []
 
 function computerGo() {
     console.log("in ComputerGo()")
@@ -274,38 +274,35 @@ function computerGo() {
         const allBoardBlocks = document.querySelectorAll('#player div')
 
         // Check if there are any ships that were hit but not sunk yet
-        if (aiHitsIndex.length > 0 && aiSunkShips.indexOf(aiHitsIndex[0]) === -1) {
+
+        console.log(sunkenShipIndices, "sunkenShipIndices")
+
+        if (aiHitsIndex.length > 0 && aiHitsIndex.some(index => !sunkenShipIndices.includes(index))) {
             console.log("There are hit ships that arent sunken")
             const lastMoveIndex = aiMoveIndex[aiMoveIndex.length - 1]; //Last move
             const lastHitIndex = aiHitsIndex[aiHitsIndex.length - 1]; // Last hit index
 
-            console.log(availableAdjacentIndices, "availableAdjacentIndices")
             if (availableAdjacentIndices.length === 0) {
                 console.log(availableAdjacentIndices, "availableAdjacentIndices was empty")
                 adjacentIndices = getAdjacentIndices(lastHitIndex, aiMoveIndex);
                 availableAdjacentIndices = availableAdjacentIndices.concat(adjacentIndices)
 
             }
-            console.log("Before filtering:", availableAdjacentIndices);
             availableAdjacentIndices = availableAdjacentIndices.filter(index =>
                 !aiHitsIndex.includes(index) &&
                 !aiMoveIndex.includes(index) &&
                 index >= 0 &&
                 index < width * width
             );
-            console.log("After filtering:", availableAdjacentIndices);
 
 
             console.log("Last move was a hit")
             if (availableAdjacentIndices.length > 0) {
-                console.log("!hi")
                 console.log(availableAdjacentIndices)
 
                 let randomGoTemp = availableAdjacentIndices[Math.floor(Math.random() * availableAdjacentIndices.length)];
-                console.log("randomGoTemp", randomGoTemp)
 
                 newAdjacentIndices = getAdjacentIndices(randomGoTemp, aiMoveIndex)
-                console.log(newAdjacentIndices, 'newAdjacentIndices')
                 if (allBoardBlocks[randomGoTemp].classList.contains('taken') && !allBoardBlocks[randomGoTemp].classList.contains('boom')) {
                     console.log("A ship has been hit")
 
@@ -317,64 +314,32 @@ function computerGo() {
                         index < width * width
                     );
 
-                    console.log(newAdjacentIndices, 'newAdjacentIndices after filter out')
-
 
                     if (newAdjacentIndices.length > 0) {
                         availableAdjacentIndices = availableAdjacentIndices.concat(newAdjacentIndices)
-                        console.log(availableAdjacentIndices, 'availableAdjacentIndices after concat')
 
                         randomGo = randomGoTemp;
-                        console.log(randomGo, "randomGo here")
                     } else {
                         console.log('No available adjacent indices')
-                        console.log(availableAdjacentIndices, 'availableAdjacentIndices if there are no new adjacentIndices')
-
                         randomGo = availableAdjacentIndices[Math.floor(Math.random() * availableAdjacentIndices.length)];
-                        console.log(randomGo, "randomGo here when none")
 
                     }
                 } else {
-                    console.log("The ship with this ne index wouldnt be hit")
-                    console.log(availableAdjacentIndices, 'availableAdjacentIndices if the ship wouldnt be hit')
+                    console.log("The ship with this index wouldnt be hit")
                     randomGo = randomGoTemp;
-                    console.log(randomGo, 'randomGo if the ship wouldnt be hit')
-
                 }
             } else {
                 // If no available adjacent indices, revert to random move
                 if (aiHitsIndex.length === 1 && aiMoveIndex.length === 1) {
                     adjacentIndices = getAdjacentIndices(lastHitIndex, aiMoveIndex);
                     randomGo = adjacentIndices[Math.floor(Math.random() * adjacentIndices.length)];
-                    console.log(randomGo, "randomGo  // If ship struck at first move")
 
                 } else {
-                    console.log(randomGo, "randomGo  // If no available adjacent indices, revert to random move")
-
                     randomGo = Math.floor(Math.random() * width * width);
                 }
 
             }
         }
-
-//TODO: addd some consol logs here currently doesnt work
-
-        /*        const sunkenShipIndexes = checkSunkShips()
-                if (sunkenShipIndexes.length !== 0) {
-                    console.log(sunkenShipIndexes, "there are sunkenShipIndexes")
-                    let adjacentIndicesToSunkenShip
-                    for (const sunkIndex of sunkenShipIndexes) {
-                        adjacentIndicesToSunkenShip = getAdjacentIndices(sunkIndex, aiMoveIndex)
-                    }
-
-                    availableAdjacentIndices = availableAdjacentIndices.filter(index => {
-                        !adjacentIndicesToSunkenShip.includes(index) &&
-
-                        console.log(availableAdjacentIndices, "availableAdjacentIndices without adjacent indices to sunken ship")
-                    });
-                    randomGo = availableAdjacentIndices[Math.floor(Math.random() * availableAdjacentIndices.length)];
-                    console.log(randomGo, "randomGo after removing")
-                }*/
 
         console.log("Next found index: ", randomGo);
 
@@ -392,11 +357,10 @@ function computerGo() {
             classes = classes.filter(className => className !== 'taken')
             aiHits.push(...classes)
             console.warn(currentlyStruckShip, "currentlyStruckShip")
-            checkScore('ai', aiHits, aiSunkShips)
+
 
             let shipName = classes[0]
             let shipLength = 0
-            console.log(shipName, "shipName before if")
             if (shipName === "destroyer") {
                 shipLength = 2
             }
@@ -412,29 +376,32 @@ function computerGo() {
             if (shipName === "carrier") {
                 shipLength = 5
             }
-            if (aiHits.filter(storedShipName => storedShipName === shipName).length === shipLength) {
 
+            console.log(aiHits, "aiHits")
+            console.log(shipName, "shipName")
+            console.log(shipLength, "shipLength")
+
+
+            const shipNameCount = aiHits.filter(storedShipName => storedShipName === shipName).length;
+            const shipHits = aiHits.filter(storedShipName => storedShipName === shipName);
+
+
+            console.log(shipNameCount, "shipNameCounts")
+            console.log(shipHits, "shipHits")
+            console.log(shipNameCount === shipLength && shipHits.length === shipLength, "is it")
+            if (shipNameCount === shipLength && shipHits.length === shipLength) {
                 const shipBlocks = Array.from(allBoardBlocks).filter(block => block.classList.contains(shipName));
-
-                // Mark ship as sunk and store its indices
                 shipBlocks.forEach(block => block.classList.add('sunk'));
-                const shipIndices = shipBlocks.map(block => parseInt(block.id));
-                for (const index of shipIndices){
-                   let adjacentSunkenIndices = getAdjacentIndices(index,aiMoveIndex)
-                    availableAdjacentIndices = availableAdjacentIndices.filter(index =>
-                        !aiSunkenShipIndices.includes(adjacentSunkenIndices)
-                    );
-                }
+                sunkenShipIndices = sunkenShipIndices.concat(shipBlocks.map(block => parseInt(block.id)));
 
-                aiSunkenShipIndices.push(...shipIndices);
-
+                availableAdjacentIndices = []
                 shipLength = 0
                 shipName = ""
-                console.log(availableAdjacentIndices,"availableAdjacentIndices after filteringout sunken adjacentz")
+                console.log(availableAdjacentIndices, "emptied available indices")
 
             }
-            console.log(shipName, "shipName after if")
 
+            checkScore('ai', aiHits, aiSunkShips)
 
         } else {
             infoDisplay.textContent = "Nothing hit this time"
@@ -453,7 +420,6 @@ function computerGo() {
         allBoardBlocks.forEach(block => block.addEventListener('click', handleClick))
     }, 500)
 }
-
 
 
 // Function to get adjacent indices for a given index, filters out the hits made by computer
