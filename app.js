@@ -336,6 +336,9 @@ function computerGo() {
 
                 } else {
                     randomGo = Math.floor(Math.random() * width * width);
+                    if(aiMoveIndex.includes(randomGo)){
+                        randomGo = Math.floor(Math.random() * width * width);
+                    }
                 }
 
             }
@@ -343,7 +346,7 @@ function computerGo() {
 
         console.log("Next found index: ", randomGo);
 
-        if (allBoardBlocks[randomGo].classList.contains('taken') && allBoardBlocks[randomGo].classList.contains('boom')) {
+        if ((allBoardBlocks[randomGo].classList.contains('taken') && allBoardBlocks[randomGo].classList.contains('boom')) || allBoardBlocks[randomGo].classList.contains('empty')) {
             computerGo()
         } else if (allBoardBlocks[randomGo].classList.contains('taken') && !allBoardBlocks[randomGo].classList.contains('boom')) {
             console.warn("i am here")
