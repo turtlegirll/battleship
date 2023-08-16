@@ -222,7 +222,7 @@ const playerSunkShips = []
 const aiSunkShips = []
 let aiHitsIndex = []
 let aiMoveIndex = []
-let aiSunkenShipIndices = []
+
 
 function handleClick(e) {
     if (!gameOver) {
@@ -248,11 +248,27 @@ function handleClick(e) {
     }
 }
 
+//
+
+function checkRelationship(index1, index2) {
+    console.log(`in checkRelationship() with index1 ${index1} and index2${index2}`)
+    const diff = Math.abs(index1 - index2);
+
+    if (diff % 10 === 0) {
+        return "Vertical";
+    } else if (index1 - index1 % 10 === index2 - index2 % 10) {
+        return "Horizontal";
+    } else {
+        return "No clear relationship";
+    }
+}
+
+
 let adjacentIndices = []
 let availableAdjacentIndices = []
 let newAdjacentIndices = []
-let currentlyStruckShip = []
 let sunkenShipIndices = []
+let newAiMoveIndex = []
 
 function computerGo() {
     console.log("in ComputerGo()")
@@ -261,7 +277,7 @@ function computerGo() {
     console.log('aiSunkShips', aiSunkShips)
     console.log('aiHitIndex', aiHitsIndex)
     console.log('aiMoveIndex', aiMoveIndex)
-
+    console.log('newAiMoveIndex', newAiMoveIndex)
     if (!gameOver) {
         turnDisplay.textContent = "Computer's turn";
         infoDisplay.textContent = "Computer is thinking...";
@@ -270,12 +286,11 @@ function computerGo() {
     setTimeout(() => {
 
         let randomGo = Math.floor(Math.random() * width * width);
-
         const allBoardBlocks = document.querySelectorAll('#player div')
 
         // Check if there are any ships that were hit but not sunk yet
 
-        console.log(sunkenShipIndices, "sunkenShipIndices")
+        // console.log(sunkenShipIndices, "sunkenShipIndices")
 
         if (aiHitsIndex.length > 0 && aiHitsIndex.some(index => !sunkenShipIndices.includes(index))) {
             console.log("There are hit ships that arent sunken")
@@ -283,7 +298,7 @@ function computerGo() {
             const lastHitIndex = aiHitsIndex[aiHitsIndex.length - 1]; // Last hit index
 
             if (availableAdjacentIndices.length === 0) {
-                console.log(availableAdjacentIndices, "availableAdjacentIndices was empty")
+                //   console.log(availableAdjacentIndices, "availableAdjacentIndices was empty")
                 adjacentIndices = getAdjacentIndices(lastHitIndex, aiMoveIndex);
                 availableAdjacentIndices = availableAdjacentIndices.concat(adjacentIndices)
 
@@ -295,8 +310,34 @@ function computerGo() {
                 index < width * width
             );
 
+            console.log(availableAdjacentIndices, "availableAdjacentIndices")
+            let lastIndex = newAiMoveIndex[newAiMoveIndex.length - 1]; // Last hit index
+            let lastLastIndex = newAiMoveIndex[newAiMoveIndex.length - 2]
+            if (newAiMoveIndex.length > 1) {
+                console.log("ship hit twicve")
+                let info = checkRelationship(lastIndex, lastLastIndex)
 
-            console.log("Last move was a hit")
+                if (info === "Horizontal") {
+                    // Keep only indices that are horizontal to the lastIndex
+                    availableAdjacentIndices = availableAdjacentIndices.filter(index =>
+                        checkRelationship(index, lastIndex) === "Horizontal"
+                    );
+                    console.log(availableAdjacentIndices, "when index hor")
+                }
+
+                if (info === "Vertical") {
+                    // Keep only indices that are vertical to the lastIndex
+                    availableAdjacentIndices = availableAdjacentIndices.filter(index =>
+                        checkRelationship(index, lastIndex) === "Vertical"
+                    );
+                    console.log(availableAdjacentIndices, "when index vert")
+                }
+
+            }
+
+            console.log(availableAdjacentIndices, "after checking")
+
+            // console.log("Last move was a hit")
             if (availableAdjacentIndices.length > 0) {
                 console.log(availableAdjacentIndices)
 
@@ -336,7 +377,7 @@ function computerGo() {
 
                 } else {
                     randomGo = Math.floor(Math.random() * width * width);
-                    if(aiMoveIndex.includes(randomGo)){
+                    if (aiMoveIndex.includes(randomGo)) {
                         randomGo = Math.floor(Math.random() * width * width);
                     }
                 }
@@ -344,73 +385,30 @@ function computerGo() {
             }
         }
 
+
         console.log("Next found index: ", randomGo);
 
         if ((allBoardBlocks[randomGo].classList.contains('taken') && allBoardBlocks[randomGo].classList.contains('boom')) || allBoardBlocks[randomGo].classList.contains('empty')) {
             computerGo()
         } else if (allBoardBlocks[randomGo].classList.contains('taken') && !allBoardBlocks[randomGo].classList.contains('boom')) {
-            console.warn("i am here")
             allBoardBlocks[randomGo].classList.add('boom')
             aiHitsIndex.push(randomGo)
             aiMoveIndex.push(randomGo)
+            newAiMoveIndex.push(randomGo)
             infoDisplay.textContent = "Computer hit your ship!"
             let classes = Array.from(allBoardBlocks[randomGo].classList)
             classes = classes.filter(className => className !== 'block')
             classes = classes.filter(className => className !== 'boom')
             classes = classes.filter(className => className !== 'taken')
             aiHits.push(...classes)
-            console.warn(currentlyStruckShip, "currentlyStruckShip")
 
-
-            let shipName = classes[0]
-            let shipLength = 0
-            if (shipName === "destroyer") {
-                shipLength = 2
-            }
-            if (shipName === "submarine") {
-                shipLength = 3
-            }
-            if (shipName === "cruiser") {
-                shipLength = 3
-            }
-            if (shipName === "battleship") {
-                shipLength = 4
-            }
-            if (shipName === "carrier") {
-                shipLength = 5
-            }
-
-            console.log(aiHits, "aiHits")
-            console.log(shipName, "shipName")
-            console.log(shipLength, "shipLength")
-
-
-            const shipNameCount = aiHits.filter(storedShipName => storedShipName === shipName).length;
-            const shipHits = aiHits.filter(storedShipName => storedShipName === shipName);
-
-
-            console.log(shipNameCount, "shipNameCounts")
-            console.log(shipHits, "shipHits")
-            console.log(shipNameCount === shipLength && shipHits.length === shipLength, "is it")
-            if (shipNameCount === shipLength && shipHits.length === shipLength) {
-                const shipBlocks = Array.from(allBoardBlocks).filter(block => block.classList.contains(shipName));
-                shipBlocks.forEach(block => block.classList.add('sunk'));
-                sunkenShipIndices = sunkenShipIndices.concat(shipBlocks.map(block => parseInt(block.id)));
-
-                availableAdjacentIndices = []
-                shipLength = 0
-                shipName = ""
-                console.log(availableAdjacentIndices, "emptied available indices")
-
-            }
-
+            checkSunkenShip(classes, allBoardBlocks)
             checkScore('ai', aiHits, aiSunkShips)
 
         } else {
             infoDisplay.textContent = "Nothing hit this time"
             allBoardBlocks[randomGo].classList.add('empty')
             aiMoveIndex.push(randomGo)
-
         }
 
 
@@ -425,6 +423,59 @@ function computerGo() {
 }
 
 
+function checkSunkenShip(classes, allBoardBlocks) {
+    console.log("in check Sunken Ship()")
+
+    let shipName = classes[0]
+    let shipLength = 0
+    if (shipName === "destroyer") {
+        shipLength = 2
+    }
+    if (shipName === "submarine") {
+        shipLength = 3
+    }
+    if (shipName === "cruiser") {
+        shipLength = 3
+    }
+    if (shipName === "battleship") {
+        shipLength = 4
+    }
+    if (shipName === "carrier") {
+        shipLength = 5
+    }
+
+    /*
+        console.log(aiHits, "aiHits")
+        console.log(shipName, "shipName")
+        console.log(shipLength, "shipLength")
+    */
+
+
+    const shipNameCount = aiHits.filter(storedShipName => storedShipName === shipName).length;
+    const shipHits = aiHits.filter(storedShipName => storedShipName === shipName);
+
+    console.log('newAiMoveIndex', newAiMoveIndex)
+
+
+    /*    console.log(shipNameCount, "shipNameCounts")
+        console.log(shipHits, "shipHits")
+        console.log(shipNameCount === shipLength && shipHits.length === shipLength, "is it")*/
+    if (shipNameCount === shipLength && shipHits.length === shipLength) {
+        const shipBlocks = Array.from(allBoardBlocks).filter(block => block.classList.contains(shipName));
+        shipBlocks.forEach(block => block.classList.add('sunk'));
+        sunkenShipIndices = sunkenShipIndices.concat(shipBlocks.map(block => parseInt(block.id)));
+        availableAdjacentIndices = []
+        newAiMoveIndex = newAiMoveIndex.filter(index => !sunkenShipIndices.includes(index));
+        shipLength = 0
+        shipName = ""
+        //    console.log(availableAdjacentIndices, "emptied available indices")
+
+    }
+    console.log('newAiMoveIndex', newAiMoveIndex)
+
+
+}
+
 // Function to get adjacent indices for a given index, filters out the hits made by computer
 function getAdjacentIndices(index, hits) {
     console.log("in getAdjacentIndices")
@@ -432,16 +483,20 @@ function getAdjacentIndices(index, hits) {
     const adjacentIndices = [];
 
     let result
+    //up
     if ((result = index - width) >= 0 && !hits.includes(result)) {
         adjacentIndices.push(result)
     }
+    //down
     if ((result = index + width) < width * width && !hits.includes(result)) {
         adjacentIndices.push(result)
     }
 
+    //left
     if (index % width !== 0 && !hits.includes(index - 1)) {
         adjacentIndices.push(index - 1);
     }
+    //right
     if ((index + 1) % width !== 0 && !hits.includes(index + 1)) {
         adjacentIndices.push(index + 1);
     }
@@ -453,6 +508,8 @@ function getAdjacentIndices(index, hits) {
 
 
 function checkScore(user, hits, sunkenShips) {
+    console.log("in checkScore()")
+
     function checkShip(shipName, shipLength) {
         if (hits.filter(storedShipName => storedShipName === shipName).length === shipLength) {
 
